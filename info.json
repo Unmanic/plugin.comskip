@@ -5,7 +5,7 @@
         2
     ],
     "description": "Generate EDL files with Comskip",
-    "icon": "https://raw.githubusercontent.com/Josh5/unmanic.plugin.comskip/master/icon.png",
+    "icon": "https://raw.githubusercontent.com/Unmanic/plugin.comskip/master/icon.png",
     "id": "comskip",
     "name": "Skip commercials in TV show - Comskip",
     "priorities": {
