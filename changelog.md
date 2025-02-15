@@ -1,4 +1,14 @@
 
+**<span style="color:#56adda">0.0.9</span>**
+- add mimetype override and comskip command line arg to support ts files
+- add parse_progress to display estimated time of completion
+
+**<span style="color:#56adda">0.0.8</span>**
+- fix comcut_path in build_comcut_args - was wrong due to copy/paste error
+
+**<span style="color:#56adda">0.0.7</span>**
+- Added h/w accelerated comskip option using cuvid
+
 **<span style="color:#56adda">0.0.6</span>**
 - Enabled support for v2 plugin executor
 
