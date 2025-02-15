@@ -26,6 +26,7 @@ import logging
 import mimetypes
 import os
 import stat
+import re
 from configparser import NoSectionError, NoOptionError
 
 from unmanic.libs.unplugins.settings import PluginSettings
@@ -42,6 +43,7 @@ class Settings(PluginSettings):
         'config':              '',
         'enable_comchap':      False,
         'enable_comcut':       False,
+        'use_hw':              False,
     }
 
     def __init__(self, *args, **kwargs):
@@ -57,6 +59,7 @@ class Settings(PluginSettings):
             },
             "enable_comchap":      self.__set_enable_comchap_form_settings(),
             "enable_comcut":       self.__set_enable_comcut_form_settings(),
+            "use_hw":              self.__set_use_hw_form_settings(),
         }
 
     def __set_allowed_extensions_form_settings(self):
@@ -85,6 +88,11 @@ class Settings(PluginSettings):
             values["display"] = 'hidden'
         return values
 
+    def __set_use_hw_form_settings(self):
+        values = {
+            "label": "Use h/w accelerated Commercial Skipping",
+        }
+        return values
 
 def file_ends_in_allowed_extensions(path, allowed_extensions):
     """
@@ -123,6 +131,7 @@ def test_valid_mimetype(file_path):
     """
     # Only run this check against video/audio/image MIME types
     mimetypes.init()
+    mimetypes.add_type('video/MP2T', '.ts')
     file_type = mimetypes.guess_type(file_path)[0]
 
     # If the file has no MIME type then it cannot be tested
@@ -198,13 +207,20 @@ def build_comskip_args(abspath, settings):
     config_file = comskip_config_file(settings)
     file_dirname = os.path.dirname(abspath)
     file_sans_ext = os.path.splitext(os.path.basename(abspath))[0]
-    return [
-        'comskip',
-        '--ini={}'.format(config_file),
-        '--output={}'.format(file_dirname),
-        '--output-filename={}'.format(file_sans_ext),
-        abspath
-    ]
+    file_ext = os.path.splitext(abspath)[1]
+    use_hw = settings.get_setting('use_hw')
+    comskip_args = ['comskip','--ini={}'.format(config_file),'--output={}'.format(file_dirname),'--output-filename={}'.format(file_sans_ext),abspath]
+    if (not use_hw) & (file_ext == '.ts'):
+        comskip_args.insert(1, '-t')
+
+    if use_hw & (file_ext != '.ts'):
+        comskip_args.insert(1, '--cuvid')
+
+    if use_hw & (file_ext == '.ts'):
+        comskip_args.insert(1, '-t')
+        comskip_args.insert(2, '--cuvid')
+
+    return comskip_args
 
 
 def build_comchap_args(abspath, file_out, settings):
@@ -213,15 +229,28 @@ def build_comchap_args(abspath, file_out, settings):
     # Ensure comchap is executable
     st = os.stat(comchap_path)
     os.chmod(comchap_path, st.st_mode | stat.S_IEXEC)
-    args = [
-        comchap_path,
-        '--comskip-ini={}'.format(config_file),
-        '--keep-edl',
-        '--keep-meta',
-        '--verbose',
-        abspath,
-        file_out,
-    ]
+    use_hw = settings.get_setting('use_hw')
+    if not use_hw:
+        args = [
+            comchap_path,
+            '--comskip-ini={}'.format(config_file),
+            '--keep-edl',
+            '--keep-meta',
+            '--verbose',
+            abspath,
+            file_out,
+        ]
+    else:
+        args = [
+            comchap_path,
+            '--comskip-ini={}'.format(config_file),
+            '--use-hw',
+            '--keep-edl',
+            '--keep-meta',
+            '--verbose',
+            abspath,
+            file_out,
+        ]
     return args
 
 
@@ -231,14 +260,26 @@ def build_comcut_args(abspath, file_out, settings):
     # Ensure comcut is executable
     st = os.stat(comcut_path)
     os.chmod(comcut_path, st.st_mode | stat.S_IEXEC)
-    args = [
-        comcut_path,
-        '--comskip-ini={}'.format(config_file),
-        '--keep-edl',
-        '--keep-meta',
-        abspath,
-        file_out,
-    ]
+    use_hw = settings.get_setting('use_hw')
+    if not use_hw:
+        args = [
+            comcut_path,
+            '--comskip-ini={}'.format(config_file),
+            '--keep-edl',
+            '--keep-meta',
+            abspath,
+            file_out,
+        ]
+    else:
+        args = [
+            comcut_path,
+            '--comskip-ini={}'.format(config_file),
+            '--use-hw',
+            '--keep-edl',
+            '--keep-meta',
+            abspath,
+            file_out,
+        ]
     return args
 
 
@@ -281,6 +322,16 @@ def on_library_management_file_test(data):
 
     return data
 
+def parse_progress(line_text):
+    match = re.search(r'^.*, (\d+)%.*$', line_text)
+    if match:
+        progress = match.group(1)
+    else:
+        progress = ''
+
+    return {
+        'percent': progress
+    }
 
 def on_worker_process(data):
     """
@@ -339,6 +390,9 @@ def on_worker_process(data):
 
         # Generate command
         data['exec_command'] = args
+
+        # Set the parser
+        data['command_progress_parser'] = parse_progress
 
         # Mark file as being processed for post-processor
         src_file_hash = hashlib.md5(original_file_path.encode('utf8')).hexdigest()
