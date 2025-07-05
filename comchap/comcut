@@ -154,7 +154,7 @@ if [ ! -f "$edlfile" ]; then
     if [ "$infile_ext" != 'ts' ]; then
       $comskipPath $comskipoutput --cuvid --ini="$comskipini" "$infile"
     else
-      comskipPath $comskipoutput -t --cuvid --ini="$comskipini" "$infile"
+      $comskipPath $comskipoutput -t --cuvid --ini="$comskipini" "$infile"
     fi
   fi
 fi
