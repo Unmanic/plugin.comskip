@@ -17,7 +17,6 @@ if ! command -v comskip &> /dev/null || [[ $(( $(comskip 2>&1 | head -1 | awk '{
     /usr/bin/apt-get install -y autoconf libtool pkg-config make libswscale-dev libavformat-dev libavcodec-dev libavutil-dev libargtable2-dev
     cd /root
     wget https://github.com/erikkaashoek/Comskip/archive/refs/heads/master.zip
-    wait $!
     unzip master.zip
     cd Comskip-master
     ./autogen.sh

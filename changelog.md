@@ -1,4 +1,7 @@
 
+**<span style="color:#56adda">0.0.11</span>**
+- fix install script - remove the wait line in the script
+
 **<span style="color:#56adda">0.0.10</span>**
 - changed init.d to install the plugin by building from github - installs the latest version with ffmpeg compatibility fixes
 - expands use_hw option to be used for either nvidia or intel QSV GPUs
